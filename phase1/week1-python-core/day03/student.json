@@ -1,0 +1,8 @@
+{
+    "name": "Ajmal",
+    "age": 22,
+    "skills": [
+        "Python",
+        "FastAPI"
+    ]
+}
