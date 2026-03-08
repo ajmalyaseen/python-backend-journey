@@ -1,0 +1,1 @@
+print('welcome day 07')
