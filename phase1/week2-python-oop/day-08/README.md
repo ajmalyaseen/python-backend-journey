@@ -1,4 +1,4 @@
-# Day 7 — Inheritance, super(), Abstract Classes & MRO
+# Day 8 — Pydantic v2 & Type Hints
 
 **Phase 1 | Week 2 | Object-Oriented Python**
 
@@ -6,78 +6,100 @@
 
 ## 📚 Topics Covered
 
-- Inheritance — parent and child classes
-- Method overriding — child changes parent behavior
-- `super()` — calling parent class methods
-- Multiple inheritance
-- MRO (Method Resolution Order)
-- Abstract classes — `ABC`, `@abstractmethod`
-- Abstract properties — `@property` + `@abstractmethod`
+- Type hints — `str`, `int`, `float`, `bool`, `Optional`, `Union`, `List`, `Dict`
+- Pydantic `BaseModel` — automatic validation
+- `Field()` — advanced constraints (`gt`, `ge`, `lt`, `le`, `min_length`, `max_length`)
+- `field_validator` — custom validation logic
+- `model_dump()` — Pydantic model → dict
+- `model_validate()` — dict → Pydantic model
+- `ValidationError` — catching Pydantic errors cleanly
+- `model_config` — `ConfigDict`, `from_attributes`, `str_strip_whitespace`
+- Nested Pydantic models
 
 ---
 
 ## 🧠 Key Concepts Learned
 
-### Inheritance
+### Type Hints
 ```python
-class Animal:
-    def __init__(self, name, species):
-        self.name = name
-        self.species = species
-    
-    def speak(self):
-        return "Some sound"
+from typing import Optional, Union, List, Dict, Any
 
-class Dog(Animal):  # Dog inherits from Animal
-    def speak(self):  # method overriding
-        return "Woof!"
-
-dog = Dog("Bruno", "Canine")
-print(dog.speak())  # Woof! — overridden
-print(dog.name)     # Bruno — inherited from Animal
+name: str = "Ajmal"
+age: int = 22
+phone: Optional[str] = None      # str or None
+scores: list[int] = [85, 90]
+data: dict[str, int] = {"age": 22}
 ```
 
-### super().__init__()
+### Pydantic BaseModel
 ```python
-class Dog(Animal):
-    def __init__(self, name, breed):
-        super().__init__(name, "Canine")  # runs Animal's __init__!
-        self.breed = breed  # Dog's own variable
+from pydantic import BaseModel
 
-# Without super().__init__() — self.name and self.species never set!
+class User(BaseModel):
+    name: str
+    age: int
+    email: str
+
+user = User(name="Ajmal", age=22, email="ajmal@gmail.com")
+print(user.name)  # Ajmal
+
+# Auto type conversion
+user2 = User(name="Ali", age="22", email="ali@gmail.com")
+# "22" → 22 automatically! ✅
 ```
 
-### Multiple Inheritance & MRO
+### Field() — Constraints
 ```python
-class D(B, C):  # inherits from both B and C
-    pass
+from pydantic import Field
 
-# MRO — Python checks left to right:
-# D → B → C → A → object
-print(D.__mro__)  # shows exact order!
+class Product(BaseModel):
+    name: str = Field(min_length=2, max_length=50)
+    price: float = Field(gt=0)       # greater than 0
+    quantity: int = Field(ge=0)      # greater than or equal to 0
+    discount: float = Field(le=100)  # less than or equal to 100
 ```
 
-### Abstract Classes
+### field_validator — Custom Validation
 ```python
-from abc import ABC, abstractmethod
+from pydantic import field_validator
 
-class Shape(ABC):  # cannot be instantiated!
-    
-    @property
-    @abstractmethod
-    def area(self) -> float:
-        pass  # child MUST implement this!
+@field_validator("email")
+@classmethod
+def validate_email(cls, value: str) -> str:
+    if "@" not in value:
+        raise ValueError("Invalid email!")
+    return value
+```
 
-class Circle(Shape):
-    def __init__(self, radius):
-        self.radius = radius
-    
-    @property
-    def area(self):
-        return 3.14 * self.radius ** 2
+### model_dump() and model_validate()
+```python
+# Pydantic → dict
+user_dict = user.model_dump()
 
-# shape = Shape()   # ❌ TypeError!
-circle = Circle(5)  # ✅ works!
+# dict → Pydantic
+user = User.model_validate(user_dict)
+```
+
+### Catching ValidationError
+```python
+from pydantic import ValidationError
+
+try:
+    user = User.model_validate(data)
+except ValidationError as e:
+    for error in e.errors():
+        print(f"❌ {error['loc'][0]}: {error['msg']}")
+```
+
+### model_config
+```python
+from pydantic import ConfigDict
+
+class User(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,  # "  Ajmal  " → "Ajmal"
+        from_attributes=True,       # works with ORM objects
+    )
 ```
 
 ---
@@ -86,69 +108,75 @@ circle = Circle(5)  # ✅ works!
 
 | File | Description |
 |------|-------------|
-| `day07_tasks.py` | All coding tasks for Day 7 |
-| `EmployeeManagementSystem.py` | Employee system mini project |
+| `day08_tasks.py` | All coding tasks for Day 8 |
+| `UserRegistrationSystem.py` | User Registration mini project |
 
 ---
 
-## 🛠 Mini Project — Employee Management System
+## 🛠 Mini Project — User Registration System
 
-A full employee management system using inheritance and abstract classes.
+A full user registration system with Pydantic validation and JSON persistence.
 
-**Class Hierarchy:**
-```
-BaseEmployee (Abstract)
-├── FullTimeEmployee  — fixed monthly salary
-├── PartTimeEmployee  — hourly rate × hours worked
-└── Contractor        — daily rate × days worked
-```
+**Validations:**
+- Name — min 2, max 20 characters
+- Age — must be greater than 18
+- Email — must contain @
+- Password — minimum 8 characters
+- Phone — optional
 
 **Sample Output:**
 ```
-Liyan | Liyan@gmail.com | 30000
-Lora | Lora@gmail.com | 21250
-Arjun | Arjun@gmail.com | 15200
+===== USER REGISTRATION SYSTEM =====
+1. Register User
+2. View All Users
+3. Exit
 
-===== EMPLOYEE SUMMARY =====
-Name: Liyan | Email: Liyan@gmail.com
-Name: Lora | Email: Lora@gmail.com
-Name: Arjun | Email: Arjun@gmail.com
+Name: ajmal
+Age: 10
+Email: anai
+Password: ajm
 
-Total Salary: ₹66450
-Highest Paid: Liyan
+❌ age: Input should be greater than 18
+❌ email: Value error, Invalid email!
+❌ password: String should have at least 8 characters
+
+User ajmal registered successfully!
+
+===== REGISTERED USERS =====
+1. ajmal | Age: 20 | Email: ajmal@gmail.com | Phone: N/A
 ```
 
 ---
 
 ## 💡 Key Lessons
 
-- Always call `super().__init__()` FIRST in child class — before adding own variables!
-- Abstract class = blueprint that cannot be instantiated directly
-- `@abstractmethod` forces ALL child classes to implement that method
-- If base uses `@property @abstractmethod` — child must also use `@property`!
-- MRO = left to right order in multiple inheritance
-- `super().__init__()` missing `()` → `TypeError` — always use `super()`!
+- Never use `int(input())` — let Pydantic handle type conversion!
+- `ValidationError` catches ALL Pydantic failures — one except block is enough!
+- `field_validator` needs `@classmethod` — always!
+- `model_dump()` → out as dict, `model_validate()` → in from dict
+- `Optional[str]` = `str | None` — user doesn't have to provide it
+- `gt=0` → 0 not allowed, `ge=0` → 0 allowed
 
 ---
 
 ## 🎤 Interview Questions Practiced
 
-- What is inheritance and why do we use it?
-- What does `super().__init__()` do and why is it important?
-- What is an abstract class? Can you create an object from it?
-- What is MRO and why does Python need it?
+- What is Pydantic and why do we use it?
+- What is the difference between `Field(gt=0)` and `Field(ge=0)`?
+- What does `model_dump()` do?
+- When would you use `field_validator` instead of just `Field()`?
 
 ---
 
 ## ✅ Checklist
 
 - [x] All coding tasks completed
-- [x] Employee Management System built
-- [x] Debugging challenge completed
+- [x] User Registration System built
+- [x] Pydantic validation working correctly
 - [x] Interview questions answered
 - [x] LinkedIn post published
 - [x] Committed to GitHub
 
 ---
 
-**Day 8 tomorrow → Pydantic v2 & Type Hints** 🚀
+**Day 9 tomorrow → Decorators & Context Managers** 🚀
